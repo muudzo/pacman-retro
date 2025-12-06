@@ -3,6 +3,7 @@ import sys
 from . import constants
 
 from .maze import Maze
+from .player import Player
 
 class Game:
     def __init__(self):
@@ -12,6 +13,8 @@ class Game:
         self.clock = pygame.time.Clock()
         self.running = True
         self.maze = Maze()
+        # Start at tile (1, 1) -> (30, 30)
+        self.player = Player(constants.TILE_SIZE, constants.TILE_SIZE)
 
     def run(self):
         """Main game loop."""
@@ -29,13 +32,16 @@ class Game:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.running = False
+        
+        self.player.handle_keys()
 
     def update(self):
         """Update game state."""
-        pass
+        self.player.update()
 
     def draw(self):
         """Render to the screen."""
         self.screen.fill(constants.BLACK)
         self.maze.draw(self.screen)
+        self.player.draw(self.screen)
         pygame.display.flip()
