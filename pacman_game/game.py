@@ -2,6 +2,8 @@ import pygame
 import sys
 from . import constants
 
+from .maze import Maze
+
 class Game:
     def __init__(self):
         pygame.init()
@@ -9,6 +11,7 @@ class Game:
         pygame.display.set_caption("Pac-Man Retro")
         self.clock = pygame.time.Clock()
         self.running = True
+        self.maze = Maze()
 
     def run(self):
         """Main game loop."""
@@ -34,5 +37,5 @@ class Game:
     def draw(self):
         """Render to the screen."""
         self.screen.fill(constants.BLACK)
-        # TODO: Draw game elements here
+        self.maze.draw(self.screen)
         pygame.display.flip()
