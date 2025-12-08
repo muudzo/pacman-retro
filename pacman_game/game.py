@@ -5,6 +5,7 @@ from . import constants
 from .maze import Maze
 from .player import Player
 from .ghosts import Ghost
+from .utils import HighScoreManager
 
 class Game:
     def __init__(self):
@@ -19,6 +20,10 @@ class Game:
         self.score = 0
         self.font = pygame.font.Font(None, 36)
         self.game_over = False
+        self.new_high_score = False
+        
+        # High score system
+        self.high_score_manager = HighScoreManager()
         
         # Create ghosts at different starting positions
         self.ghosts = [
@@ -70,6 +75,9 @@ class Game:
             # Check collision with player
             if ghost.collides_with(self.player):
                 self.game_over = True
+                # Update high score
+                self.new_high_score = self.high_score_manager.update_high_score(self.score)
+
 
     def draw(self):
         """Render to the screen."""
@@ -86,6 +94,11 @@ class Game:
         score_text = self.font.render(f"Score: {self.score}", True, constants.WHITE)
         self.screen.blit(score_text, (10, constants.SCREEN_HEIGHT - 40))
         
+        # Draw high score
+        high_score = self.high_score_manager.get_high_score()
+        high_score_text = self.font.render(f"High Score: {high_score}", True, constants.YELLOW)
+        self.screen.blit(high_score_text, (constants.SCREEN_WIDTH - 250, constants.SCREEN_HEIGHT - 40))
+        
         # Draw dots remaining
         dots_remaining = self.maze.total_dots - self.maze.dots_collected
         dots_text = self.font.render(f"Dots: {dots_remaining}", True, constants.WHITE)
@@ -94,10 +107,17 @@ class Game:
         # Draw game over message
         if self.game_over:
             game_over_text = self.font.render("GAME OVER!", True, constants.RED)
-            restart_text = self.font.render("Press R to Restart", True, constants.WHITE)
-            text_rect = game_over_text.get_rect(center=(constants.SCREEN_WIDTH // 2, constants.SCREEN_HEIGHT // 2))
-            restart_rect = restart_text.get_rect(center=(constants.SCREEN_WIDTH // 2, constants.SCREEN_HEIGHT // 2 + 40))
+            text_rect = game_over_text.get_rect(center=(constants.SCREEN_WIDTH // 2, constants.SCREEN_HEIGHT // 2 - 40))
             self.screen.blit(game_over_text, text_rect)
+            
+            # Show new high score message
+            if self.new_high_score:
+                new_high_text = self.font.render("NEW HIGH SCORE!", True, constants.YELLOW)
+                new_high_rect = new_high_text.get_rect(center=(constants.SCREEN_WIDTH // 2, constants.SCREEN_HEIGHT // 2))
+                self.screen.blit(new_high_text, new_high_rect)
+            
+            restart_text = self.font.render("Press R to Restart", True, constants.WHITE)
+            restart_rect = restart_text.get_rect(center=(constants.SCREEN_WIDTH // 2, constants.SCREEN_HEIGHT // 2 + 40))
             self.screen.blit(restart_text, restart_rect)
         
         pygame.display.flip()
