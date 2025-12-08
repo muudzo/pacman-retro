@@ -37,7 +37,7 @@ class Game:
 
     def update(self):
         """Update game state."""
-        self.player.update()
+        self.player.update(self.maze)
 
     def draw(self):
         """Render to the screen."""

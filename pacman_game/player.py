@@ -21,15 +21,33 @@ class Player:
         elif keys[pygame.K_DOWN]:
             self.next_direction = (0, 1)
 
-    def update(self):
-        # Apply the next direction if possible (collision detection will come later)
-        # For now, just change direction immediately
+    def update(self, maze):
+        # Try to change direction if a new direction is requested
         if self.next_direction != (0, 0):
-            self.direction = self.next_direction
+            # Calculate center position for collision checking
+            center_x = self.x + constants.TILE_SIZE / 2
+            center_y = self.y + constants.TILE_SIZE / 2
+            
+            # Try the new direction
+            new_x = center_x + self.next_direction[0] * self.speed
+            new_y = center_y + self.next_direction[1] * self.speed
+            
+            if maze.can_move_to(new_x, new_y, self.radius):
+                self.direction = self.next_direction
         
-        self.x += self.direction[0] * self.speed
-        self.y += self.direction[1] * self.speed
-
+        # Calculate center position
+        center_x = self.x + constants.TILE_SIZE / 2
+        center_y = self.y + constants.TILE_SIZE / 2
+        
+        # Try to move in current direction
+        new_x = center_x + self.direction[0] * self.speed
+        new_y = center_y + self.direction[1] * self.speed
+        
+        # Only move if the new position is valid
+        if maze.can_move_to(new_x, new_y, self.radius):
+            self.x += self.direction[0] * self.speed
+            self.y += self.direction[1] * self.speed
+        
         # Screen wrapping (classic Pac-Man feature)
         if self.x > constants.SCREEN_WIDTH:
             self.x = 0
@@ -41,6 +59,7 @@ class Player:
             self.y = 0
         elif self.y < 0:
             self.y = constants.SCREEN_HEIGHT
+
 
     def draw(self, screen):
         # Draw Pac-Man as a yellow circle
