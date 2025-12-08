@@ -15,6 +15,8 @@ class Game:
         self.maze = Maze()
         # Start at tile (1, 1) -> (30, 30)
         self.player = Player(constants.TILE_SIZE, constants.TILE_SIZE)
+        self.score = 0
+        self.font = pygame.font.Font(None, 36)
 
     def run(self):
         """Main game loop."""
@@ -38,10 +40,24 @@ class Game:
     def update(self):
         """Update game state."""
         self.player.update(self.maze)
+        
+        # Collect dots
+        points = self.maze.collect_dot(self.player.x, self.player.y)
+        self.score += points
 
     def draw(self):
         """Render to the screen."""
         self.screen.fill(constants.BLACK)
         self.maze.draw(self.screen)
         self.player.draw(self.screen)
+        
+        # Draw score
+        score_text = self.font.render(f"Score: {self.score}", True, constants.WHITE)
+        self.screen.blit(score_text, (10, constants.SCREEN_HEIGHT - 40))
+        
+        # Draw dots remaining
+        dots_remaining = self.maze.total_dots - self.maze.dots_collected
+        dots_text = self.font.render(f"Dots: {dots_remaining}", True, constants.WHITE)
+        self.screen.blit(dots_text, (10, constants.SCREEN_HEIGHT - 80))
+        
         pygame.display.flip()

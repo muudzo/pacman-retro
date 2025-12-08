@@ -3,12 +3,13 @@ from . import constants
 
 class Player:
     def __init__(self, x, y):
-        self.x = x
-        self.y = y
+        # Store position as CENTER of Pac-Man, not top-left
+        self.x = x + constants.TILE_SIZE / 2
+        self.y = y + constants.TILE_SIZE / 2
         self.speed = 2
         self.direction = (0, 0)
         self.next_direction = (0, 0)
-        self.radius = constants.TILE_SIZE // 2 - 2
+        self.radius = constants.TILE_SIZE // 2 - 4  # Slightly smaller for better collision feel
 
     def handle_keys(self):
         keys = pygame.key.get_pressed()
@@ -24,49 +25,22 @@ class Player:
     def update(self, maze):
         # Try to change direction if a new direction is requested
         if self.next_direction != (0, 0):
-            # Calculate center position for collision checking
-            center_x = self.x + constants.TILE_SIZE / 2
-            center_y = self.y + constants.TILE_SIZE / 2
-            
             # Try the new direction
-            new_x = center_x + self.next_direction[0] * self.speed
-            new_y = center_y + self.next_direction[1] * self.speed
+            new_x = self.x + self.next_direction[0] * self.speed
+            new_y = self.y + self.next_direction[1] * self.speed
             
             if maze.can_move_to(new_x, new_y, self.radius):
                 self.direction = self.next_direction
         
-        # Calculate center position
-        center_x = self.x + constants.TILE_SIZE / 2
-        center_y = self.y + constants.TILE_SIZE / 2
-        
         # Try to move in current direction
-        new_x = center_x + self.direction[0] * self.speed
-        new_y = center_y + self.direction[1] * self.speed
+        new_x = self.x + self.direction[0] * self.speed
+        new_y = self.y + self.direction[1] * self.speed
         
         # Only move if the new position is valid
         if maze.can_move_to(new_x, new_y, self.radius):
-            self.x += self.direction[0] * self.speed
-            self.y += self.direction[1] * self.speed
-        
-        # Screen wrapping (classic Pac-Man feature)
-        if self.x > constants.SCREEN_WIDTH:
-            self.x = 0
-        elif self.x < 0:
-            self.x = constants.SCREEN_WIDTH
-        
-        # Simple bounds checking (vertical) - keep in screen
-        if self.y > constants.SCREEN_HEIGHT:
-            self.y = 0
-        elif self.y < 0:
-            self.y = constants.SCREEN_HEIGHT
-
+            self.x = new_x
+            self.y = new_y
 
     def draw(self, screen):
-        # Draw Pac-Man as a yellow circle
-        # Offset by radius because x,y are usually top-left in grids, 
-        # but let's treat x,y as center for the circle drawing or adjust accordingly.
-        # Let's assume x,y is the top-left of the tile for now to match maze grid.
-        center_x = int(self.x + constants.TILE_SIZE / 2)
-        center_y = int(self.y + constants.TILE_SIZE / 2)
-        
-        pygame.draw.circle(screen, constants.YELLOW, (center_x, center_y), self.radius)
+        # Draw Pac-Man as a yellow circle (x, y are already center coordinates)
+        pygame.draw.circle(screen, constants.YELLOW, (int(self.x), int(self.y)), self.radius)
