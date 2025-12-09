@@ -1,12 +1,13 @@
 """Ghost entities with AI"""
 import pygame
-import random
 from .entities.base import Entity
 from . import config
+from .ai.pathfinding import get_next_direction
+from .ai.ghost_behaviors import GhostBehavior, get_target_tile
 
 
 class Ghost(Entity):
-    """Ghost enemy with random movement AI"""
+    """Ghost enemy with intelligent AI"""
     
     def __init__(self, x, y, color, ghost_type="BLINKY"):
         """
@@ -16,7 +17,7 @@ class Ghost(Entity):
             x: Starting X position (tile coordinate)
             y: Starting Y position (tile coordinate)
             color: RGB color tuple
-            ghost_type: Type of ghost (for future AI differentiation)
+            ghost_type: Type of ghost ("BLINKY", "PINKY", "INKY", "CLYDE")
         """
         # Convert tile position to center pixel position
         center_x = x + config.TILE_SIZE / 2
@@ -26,56 +27,87 @@ class Ghost(Entity):
         super().__init__(center_x, center_y, config.GHOST_SPEED, radius, color)
         
         self.ghost_type = ghost_type
-        self.change_direction_timer = 0
-        self.change_direction_interval = config.GHOST_DIRECTION_CHANGE_INTERVAL
+        self.behavior = GhostBehavior.SCATTER
+        self.behavior_timer = 0
+        self.target_tile = None
+        self.pathfinding_update_counter = 0
     
-    def update(self, level):
+    def update(self, level, player, blinky=None):
         """
         Update ghost position and AI.
         
         Args:
             level: Level instance for collision detection
+            player: Player instance for targeting
+            blinky: Blinky ghost instance (needed for Inky's targeting)
         """
-        self.change_direction_timer += 1
+        # Update behavior timer and switch between scatter/chase
+        self.behavior_timer += 1
         
-        # Randomly change direction periodically or when hitting a wall
-        if self.change_direction_timer >= self.change_direction_interval:
-            self.choose_new_direction(level)
-            self.change_direction_timer = 0
+        # Behavior pattern: scatter for 7 seconds, chase for 20 seconds, repeat
+        if self.behavior == GhostBehavior.SCATTER:
+            if self.behavior_timer >= config.SCATTER_DURATION:
+                self.behavior = GhostBehavior.CHASE
+                self.behavior_timer = 0
+        elif self.behavior == GhostBehavior.CHASE:
+            if self.behavior_timer >= config.CHASE_DURATION:
+                self.behavior = GhostBehavior.SCATTER
+                self.behavior_timer = 0
         
-        # Try to move in current direction
+        # Update pathfinding periodically (not every frame for performance)
+        self.pathfinding_update_counter += 1
+        if self.pathfinding_update_counter >= config.PATHFINDING_UPDATE_INTERVAL:
+            self.pathfinding_update_counter = 0
+            self.update_target(level, player, blinky)
+        
+        # Move in current direction
         new_x = self.x + self.direction[0] * self.speed
         new_y = self.y + self.direction[1] * self.speed
         
-        # If can move, do it; otherwise choose new direction
+        # Only move if the new position is valid
         if level.can_move_to(new_x, new_y, self.radius):
             self.x = new_x
             self.y = new_y
         else:
-            # Hit a wall, choose new direction immediately
-            self.choose_new_direction(level)
+            # Hit a wall, recalculate path immediately
+            self.update_target(level, player, blinky)
     
-    def choose_new_direction(self, level):
+    def update_target(self, level, player, blinky=None):
         """
-        Choose a random valid direction.
+        Update target tile and calculate path.
         
         Args:
             level: Level instance for collision detection
+            player: Player instance for targeting
+            blinky: Blinky ghost instance (for Inky's targeting)
         """
-        directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]  # left, right, up, down
-        random.shuffle(directions)
+        # Convert positions to grid coordinates
+        ghost_grid_pos = (int(self.x / config.TILE_SIZE), int(self.y / config.TILE_SIZE))
+        player_grid_pos = (int(player.x / config.TILE_SIZE), int(player.y / config.TILE_SIZE))
         
-        # Try each direction and pick the first valid one
-        for direction in directions:
-            new_x = self.x + direction[0] * self.speed * 5  # Look ahead a bit
-            new_y = self.y + direction[1] * self.speed * 5
-            
-            if level.can_move_to(new_x, new_y, self.radius):
-                self.direction = direction
-                return
+        # Get player's direction for targeting
+        player_direction = player.direction
         
-        # If no valid direction found, stop
-        self.direction = (0, 0)
+        # Get Blinky's position if available (for Inky)
+        blinky_grid_pos = None
+        if blinky and self.ghost_type == "INKY":
+            blinky_grid_pos = (int(blinky.x / config.TILE_SIZE), int(blinky.y / config.TILE_SIZE))
+        
+        # Get target tile based on behavior and ghost type
+        self.target_tile = get_target_tile(
+            self.ghost_type,
+            self.behavior,
+            ghost_grid_pos,
+            player_grid_pos,
+            player_direction,
+            blinky_grid_pos
+        )
+        
+        # Calculate next direction using A* pathfinding
+        next_direction = get_next_direction(ghost_grid_pos, self.target_tile, level)
+        
+        if next_direction != (0, 0):
+            self.direction = next_direction
     
     def draw(self, screen):
         """Draw the ghost with eyes"""
@@ -95,3 +127,4 @@ class Ghost(Entity):
                          (int(self.x + eye_offset), int(self.y - 3)), eye_radius)
         pygame.draw.circle(screen, config.BLACK, 
                          (int(self.x + eye_offset), int(self.y - 3)), eye_radius // 2)
+

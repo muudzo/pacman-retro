@@ -92,9 +92,10 @@ class Game:
         # Check level completion
         self.state_machine.check_level_complete(self.pellet_manager.pellets_remaining())
         
-        # Update ghosts
+        # Update ghosts (pass player and blinky for AI targeting)
+        blinky = self.ghosts[0] if len(self.ghosts) > 0 else None
         for ghost in self.ghosts:
-            ghost.update(self.level)
+            ghost.update(self.level, self.player, blinky)
             
             # Check collision with player
             if ghost.collides_with(self.player):
