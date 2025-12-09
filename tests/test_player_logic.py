@@ -18,15 +18,15 @@ def mock_input_handler():
 
 def test_player_init_position():
     """Verify player initializes at center of tile"""
-    p = Player(1, 1) # Tile (1, 1)
-    # Center = 1 * 30 + 15 = 45
+    p = Player(1 * config.TILE_SIZE, 1 * config.TILE_SIZE) # Tile (1, 1) pixels
+    # Center = 30 + 15 = 45
     assert p.x == 45
     assert p.y == 45
     assert p.direction == (0, 0)
 
 def test_is_at_tile_center():
     """Verify center tolerance check"""
-    p = Player(1, 1)
+    p = Player(30, 30)
     p.x = 45
     p.y = 45
     assert p.is_at_tile_center() is True
@@ -41,7 +41,7 @@ def test_is_at_tile_center():
 
 def test_update_consumes_input(mock_level, mock_input_handler):
     """Verify update reads from input handler"""
-    p = Player(1, 1)
+    p = Player(30, 30)
     mock_input_handler.get_buffered_direction.return_value = (1, 0)
     
     p.update(mock_level, mock_input_handler)
@@ -51,7 +51,7 @@ def test_update_consumes_input(mock_level, mock_input_handler):
 
 def test_update_turns_at_center(mock_level, mock_input_handler):
     """Verify turning logic executes when at center and path validity check passes"""
-    p = Player(1, 1)
+    p = Player(30, 30)
     p.desired_direction = (0, 1) # Want to go DOWN
     p.direction = (1, 0) # Currently going RIGHT
     
@@ -71,11 +71,13 @@ def test_update_turns_at_center(mock_level, mock_input_handler):
     
     # verify movement happened in new direction
     # speed is usually 2 or 3.
-    assert p.y == 45 + p.speed
+    target = 45 + p.speed
+    # Floating point comparison safety generally good for exact int addition but let's be safe
+    assert p.y == target
 
 def test_update_blocks_turn_if_wall(mock_level, mock_input_handler):
     """Verify turn blocked if level says no"""
-    p = Player(1, 1)
+    p = Player(30, 30)
     p.desired_direction = (0, 1)
     p.direction = (1, 0)
     
@@ -92,7 +94,7 @@ def test_update_blocks_turn_if_wall(mock_level, mock_input_handler):
 def test_wall_slide_alignment(mock_level, mock_input_handler):
     """Verify wall slide aligns to grid if stuck"""
     config.WALL_SLIDE_ENABLED = True
-    p = Player(1, 1)
+    p = Player(30, 30)
     p.direction = (1, 0)
     
     # At center

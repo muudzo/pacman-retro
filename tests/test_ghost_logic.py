@@ -25,7 +25,7 @@ def test_ghost_initialization():
     assert g.x == 45
     assert g.y == 45
     assert g.behavior == GhostBehavior.SCATTER
-    assert g.name == "BLINKY"
+    assert g.ghost_type == "BLINKY"
 
 def test_ghost_update_movement(mock_level, mock_player):
     """Verify ghost moves in current direction"""
@@ -57,6 +57,9 @@ def test_ghost_recalculation_at_center(mock_level, mock_player, monkeypatch):
     # Mock behavior to ensure we are in CHASE
     g.behavior = GhostBehavior.CHASE
     
+    # FORCE pathfinding update
+    g.pathfinding_update_counter = config.PATHFINDING_UPDATE_INTERVAL
+    
     g.update(mock_level, mock_player, None)
     
     # Should have called pathfinding and set direction
@@ -80,31 +83,26 @@ def test_ghost_mode_switch():
     # 1. Start in SCATTER (default)
     assert g.behavior == GhostBehavior.SCATTER
     
-    # 2. Advance time past SCATTER_DURATION (7000ms)
-    # config.SCATTER_DURATION = 7000
-    pygame.time.get_ticks.return_value = 7001
+    # 2. Advance time past SCATTER_DURATION (frames/ticks in logic)
+    # Ghost.update uses self.behavior_timer += 1
+    # Check config.SCATTER_DURATION usage
+    # We must manually set the timer to simulate elapsed time
+    g.behavior_timer = config.SCATTER_DURATION # Trigger switch
     
-    # Update needs level/player mocks (passed as None for now if simple update checks allow)
-    # update() calls: 
-    #   current_time = pygame.time.get_ticks()
-    #   if current_time - self.last_mode_switch > duration: ...
-    # It also calls move/calc_dir which might crash if level is None.
-    # We should use mocks.
+    # Update needs level/player mocks
     mock_lvl = MagicMock()
     mock_lvl.can_move_to.return_value = True
     mock_lvl.is_intersection.return_value = False
-    
     mock_plyr = MagicMock()
     
     g.update(mock_lvl, mock_plyr, None)
     
     # Should have switched to CHASE
     assert g.behavior == GhostBehavior.CHASE
+    assert g.behavior_timer == 0 # Reset
     
-    # 3. Advance time past CHASE_DURATION (20000ms)
-    # Last switch was at 7001 (set to current time)
-    # Target: 7001 + 20000 + 1 = 27002
-    pygame.time.get_ticks.return_value = 27002
+    # 3. Advance time past CHASE_DURATION
+    g.behavior_timer = config.CHASE_DURATION
     
     g.update(mock_lvl, mock_plyr, None)
     
