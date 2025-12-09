@@ -46,6 +46,10 @@ class Ghost(Entity):
             blinky: Blinky ghost instance (needed for Inky's targeting)
         """
         # Update behavior timer and switch between scatter/chase
+        if self.behavior == GhostBehavior.IDLE:
+            # Ghost is in house, do nothing (or bounce)
+            return
+
         self.behavior_timer += 1
         
         # Behavior pattern: scatter for 7 seconds, chase for 20 seconds, repeat

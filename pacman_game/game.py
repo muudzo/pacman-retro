@@ -99,6 +99,33 @@ class Game:
         
         # Update ghosts (pass player and blinky for AI targeting)
         blinky = self.ghosts[0] if len(self.ghosts) > 0 else None
+        
+        # Ghost Release Logic
+        # Frame-based timer for release
+        current_time = pygame.time.get_ticks()
+        
+        # Simple staggered release: 0s, 5s, 10s, 15s
+        # 0: BLINKY (Immediate)
+        # 1: PINKY (5s)
+        # 2: INKY (10s)
+        # 3: CLYDE (15s)
+        
+        # Note: In a real game this would use a dot counter, but user asked for a "trigger"
+        if len(self.ghosts) >= 4:
+            # BLINKY (0) is active by default (handled in init/respawn)
+            
+            # PINKY (1)
+            if self.ghosts[1].behavior == GhostBehavior.IDLE and current_time - self.state_machine.state_start_time > 5000:
+                self.ghosts[1].behavior = GhostBehavior.SCATTER
+            
+            # INKY (2)
+            if self.ghosts[2].behavior == GhostBehavior.IDLE and current_time - self.state_machine.state_start_time > 10000:
+                self.ghosts[2].behavior = GhostBehavior.SCATTER
+                
+            # CLYDE (3)
+            if self.ghosts[3].behavior == GhostBehavior.IDLE and current_time - self.state_machine.state_start_time > 15000:
+                self.ghosts[3].behavior = GhostBehavior.SCATTER
+
         for ghost in self.ghosts:
             ghost.update(self.level, self.player, blinky)
             
@@ -198,12 +225,23 @@ class Game:
         ghost_speed = min(config.GHOST_SPEED + level_modifier, config.PLAYER_SPEED - 0.2)
         
         self.player = Player(config.TILE_SIZE, config.TILE_SIZE)
-        self.ghosts = [
-            Ghost(config.TILE_SIZE * 9, config.TILE_SIZE * 9, config.RED, "BLINKY", ghost_speed),
-            Ghost(config.TILE_SIZE * 10, config.TILE_SIZE * 9, config.PINK, "PINKY", ghost_speed),
-            Ghost(config.TILE_SIZE * 9, config.TILE_SIZE * 10, config.CYAN, "INKY", ghost_speed),
-            Ghost(config.TILE_SIZE * 10, config.TILE_SIZE * 10, config.ORANGE, "CLYDE", ghost_speed),
-        ]
+        
+        # Initialize ghosts
+        # Blinky starts active
+        g1 = Ghost(config.TILE_SIZE * 9, config.TILE_SIZE * 9, config.RED, "BLINKY", ghost_speed)
+        g1.behavior = GhostBehavior.SCATTER
+        
+        # Others start idle
+        g2 = Ghost(config.TILE_SIZE * 10, config.TILE_SIZE * 9, config.PINK, "PINKY", ghost_speed)
+        g2.behavior = GhostBehavior.IDLE
+        
+        g3 = Ghost(config.TILE_SIZE * 9, config.TILE_SIZE * 10, config.CYAN, "INKY", ghost_speed)
+        g3.behavior = GhostBehavior.IDLE
+        
+        g4 = Ghost(config.TILE_SIZE * 10, config.TILE_SIZE * 10, config.ORANGE, "CLYDE", ghost_speed)
+        g4.behavior = GhostBehavior.IDLE
+        
+        self.ghosts = [g1, g2, g3, g4]
     
     def reset(self):
         """Reset game to initial state"""

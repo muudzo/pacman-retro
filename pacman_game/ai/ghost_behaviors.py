@@ -6,9 +6,12 @@ from .. import config
 
 class GhostBehavior(Enum):
     """Ghost behavior states"""
-    SCATTER = auto()
-    CHASE = auto()
-    FRIGHTENED = auto()
+    SCATTER = 1
+    CHASE = 2
+    FRIGHTENED = 3
+    IDLE = 4
+    EXITING = 5
+    DEAD = 6
 
 
 # Scatter target corners for each ghost type
