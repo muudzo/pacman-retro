@@ -66,6 +66,15 @@ class Player(Entity):
             if buffered != (0, 0):
                 self.desired_direction = buffered
         
+        # Check for immediate reverse (allowed anywhere)
+        if self.desired_direction != (0, 0) and self.direction != (0, 0):
+            # Check if opposite
+            if (self.desired_direction[0] == -self.direction[0] and 
+                self.desired_direction[1] == -self.direction[1]):
+                self.direction = self.desired_direction
+                if input_handler:
+                    input_handler.clear_buffer()
+        
         # Try to change direction if at tile center
         if self.desired_direction != (0, 0) and self.is_at_tile_center():
             # Try the desired direction
