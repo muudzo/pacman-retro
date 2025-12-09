@@ -9,7 +9,7 @@ from .ai.ghost_behaviors import GhostBehavior, get_target_tile
 class Ghost(Entity):
     """Ghost enemy with intelligent AI"""
     
-    def __init__(self, x, y, color, ghost_type="BLINKY"):
+    def __init__(self, x, y, color, ghost_type="BLINKY", speed=None):
         """
         Initialize ghost.
         
@@ -18,13 +18,17 @@ class Ghost(Entity):
             y: Starting Y position (tile coordinate)
             color: RGB color tuple
             ghost_type: Type of ghost ("BLINKY", "PINKY", "INKY", "CLYDE")
+            speed: Movement speed (pixels per frame). If None, uses default.
         """
         # Convert tile position to center pixel position
         center_x = x + config.TILE_SIZE / 2
         center_y = y + config.TILE_SIZE / 2
         radius = config.TILE_SIZE // 2 - config.GHOST_RADIUS_OFFSET
         
-        super().__init__(center_x, center_y, config.GHOST_SPEED, radius, color)
+        # Use provided speed or default
+        move_speed = speed if speed is not None else config.GHOST_SPEED
+        
+        super().__init__(center_x, center_y, move_speed, radius, color)
         
         self.ghost_type = ghost_type
         self.behavior = GhostBehavior.SCATTER

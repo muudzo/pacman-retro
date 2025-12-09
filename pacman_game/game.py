@@ -9,6 +9,7 @@ from .ghosts import Ghost
 from .utils import HighScoreManager
 from .state_machine import GameStateMachine, GameState
 from .input_handler import InputHandler
+from .debug.overlay import DebugOverlay
 
 
 class Game:
@@ -29,6 +30,7 @@ class Game:
         self.state_machine = GameStateMachine()
         self.input_handler = InputHandler()
         self.high_score_manager = HighScoreManager()
+        self.debug_overlay = DebugOverlay()
         
         # Initialize entities
         self.player = Player(config.TILE_SIZE, config.TILE_SIZE)
@@ -41,6 +43,7 @@ class Game:
         
         self.score = 0
         self.new_high_score = False
+        self.fps = 60  # FPS tracking for debug
 
     def run(self):
         """Main game loop"""
@@ -63,6 +66,8 @@ class Game:
             self.running = False
         elif events['restart'] and self.state_machine.is_game_over():
             self.reset()
+        elif events['debug_toggle']:
+            self.debug_overlay.toggle()
         
         # Get directional input and pass to player
         if self.state_machine.is_playing():
@@ -120,7 +125,14 @@ class Game:
         # Draw UI
         self.draw_ui()
         
+        # Draw debug overlay
+        self.debug_overlay.draw(self.screen, self.level, self.player, self.ghosts, 
+                               self.state_machine, self.fps)
+        
         pygame.display.flip()
+        
+        # Update FPS for debug
+        self.fps = self.clock.get_fps() if self.clock.get_fps() > 0 else 60
     
     def draw_ui(self):
         """Draw UI elements (score, lives, messages)"""
@@ -180,12 +192,16 @@ class Game:
     
     def respawn_entities(self):
         """Respawn player and ghosts at starting positions"""
+        # Calculate ghost speed based on level (increases by 0.1 per level, capped at player speed)
+        level_modifier = (self.state_machine.level_number - 1) * 0.1
+        ghost_speed = min(config.GHOST_SPEED + level_modifier, config.PLAYER_SPEED - 0.2)
+        
         self.player = Player(config.TILE_SIZE, config.TILE_SIZE)
         self.ghosts = [
-            Ghost(config.TILE_SIZE * 9, config.TILE_SIZE * 9, config.RED, "BLINKY"),
-            Ghost(config.TILE_SIZE * 10, config.TILE_SIZE * 9, config.PINK, "PINKY"),
-            Ghost(config.TILE_SIZE * 9, config.TILE_SIZE * 10, config.CYAN, "INKY"),
-            Ghost(config.TILE_SIZE * 10, config.TILE_SIZE * 10, config.ORANGE, "CLYDE"),
+            Ghost(config.TILE_SIZE * 9, config.TILE_SIZE * 9, config.RED, "BLINKY", ghost_speed),
+            Ghost(config.TILE_SIZE * 10, config.TILE_SIZE * 9, config.PINK, "PINKY", ghost_speed),
+            Ghost(config.TILE_SIZE * 9, config.TILE_SIZE * 10, config.CYAN, "INKY", ghost_speed),
+            Ghost(config.TILE_SIZE * 10, config.TILE_SIZE * 10, config.ORANGE, "CLYDE", ghost_speed),
         ]
     
     def reset(self):
