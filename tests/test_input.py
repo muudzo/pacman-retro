@@ -52,10 +52,13 @@ def test_buffered_input_consumption(mock_pygame):
     handler.reset_buffer()
     assert handler.get_buffered_direction() == (0, 0)
 
+from hypothesis import settings, HealthCheck
+
 @given(
     dx=st.integers(min_value=-1, max_value=1),
     dy=st.integers(min_value=-1, max_value=1)
 )
+@settings(suppress_health_check=[HealthCheck.function_scoped_fixture])
 def test_input_buffering_fuzz(mock_pygame, dx, dy):
     """Property check: Input handler always handles direction tuples safely"""
     handler = InputHandler()

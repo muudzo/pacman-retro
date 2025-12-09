@@ -1,2 +1,4 @@
 pygame
 pytest
+hypothesis
+pytest-cov

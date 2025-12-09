@@ -1,6 +1,7 @@
 """Input handling with buffering support"""
 import pygame
-from . import config
+import sys
+from pacman_game import config
 
 
 class InputHandler:
@@ -74,21 +75,26 @@ class InputHandler:
     
     def get_buffered_direction(self):
         """
-        Get buffered direction if still valid.
+        Get and consume the buffered direction if it's still valid.
         
         Returns:
-            tuple: Buffered direction or (0, 0) if expired
+            tuple: (dx, dy) direction or (0, 0) if invalid/expired
         """
         current_time = pygame.time.get_ticks()
         
-        # Check if buffer is still valid (within INPUT_BUFFER_DURATION ms)
-        if current_time - self.buffer_timestamp <= config.INPUT_BUFFER_DURATION:
+        # Check if buffer is valid and not expired
+        if (self.buffered_direction != (0, 0) and 
+            current_time - self.buffer_timestamp <= config.INPUT_BUFFER_DURATION):
             return self.buffered_direction
-        
+            
         return (0, 0)
+
+    def reset_buffer(self):
+        """Clear the input buffer"""
+        self.buffered_direction = (0, 0)
+        self.buffer_timestamp = 0
     
     def clear_buffer(self):
         """Clear the input buffer"""
         self.buffered_direction = (0, 0)
         self.buffer_timestamp = 0
-
