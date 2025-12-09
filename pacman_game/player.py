@@ -75,7 +75,8 @@ class Player(Entity):
                 if input_handler:
                     input_handler.clear_buffer()
         
-        # Try to change direction if at tile center
+        # Try to change direction:
+        # 1. Check if at tile center (Standard turn)
         if self.desired_direction != (0, 0) and self.is_at_tile_center():
             # Try the desired direction
             new_x = self.x + self.desired_direction[0] * self.speed
@@ -86,6 +87,41 @@ class Player(Entity):
                 # Clear buffer after successful turn
                 if input_handler:
                     input_handler.clear_buffer()
+
+        # 2. If NOT at center but Blocked (Wall Turn / Cornering)
+        elif self.desired_direction != (0, 0):
+            # Check if current direction is blocked
+            next_x = self.x + self.direction[0] * self.speed
+            next_y = self.y + self.direction[1] * self.speed
+            
+            if not level.can_move_to(next_x, next_y, self.radius):
+                # Stuck! Try to snap-turn.
+                # Determine snap target based on Desired Direction axis
+                snap_x = self.x
+                snap_y = self.y
+                
+                # Formula: round((val - offset) / tile_size) * tile_size + offset
+                offset = config.TILE_SIZE / 2
+                
+                if self.desired_direction[0] != 0: # Horizontal turn -> Snap Y
+                    grid_y_idx = round((self.y - offset) / config.TILE_SIZE)
+                    snap_y = grid_y_idx * config.TILE_SIZE + offset
+                    
+                elif self.desired_direction[1] != 0: # Vertical turn -> Snap X
+                    grid_x_idx = round((self.x - offset) / config.TILE_SIZE)
+                    snap_x = grid_x_idx * config.TILE_SIZE + offset
+                
+                # Check if turn is valid from SNAP position
+                check_x = snap_x + self.desired_direction[0] * self.speed
+                check_y = snap_y + self.desired_direction[1] * self.speed
+                
+                if level.can_move_to(check_x, check_y, self.radius):
+                    # Valid turn! Snap and turn.
+                    self.x = snap_x
+                    self.y = snap_y
+                    self.direction = self.desired_direction
+                    if input_handler:
+                        input_handler.clear_buffer()
         
         # Try to move in current direction
         new_x = self.x + self.direction[0] * self.speed
