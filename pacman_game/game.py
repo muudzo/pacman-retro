@@ -136,27 +136,28 @@ class Game:
     
     def draw_ui(self):
         """Draw UI elements (score, lives, messages)"""
-        # Draw score
+        # Draw score (Top Left)
         score_text = self.font.render(f"Score: {self.score}", True, config.WHITE)
-        self.screen.blit(score_text, (10, config.SCREEN_HEIGHT - 40))
+        self.screen.blit(score_text, (10, 10))
         
-        # Draw high score
+        # Draw high score (Top Center)
         high_score = self.high_score_manager.get_high_score()
         high_score_text = self.font.render(f"High Score: {high_score}", True, config.YELLOW)
-        self.screen.blit(high_score_text, (config.SCREEN_WIDTH - 250, config.SCREEN_HEIGHT - 40))
+        high_score_rect = high_score_text.get_rect(midtop=(config.SCREEN_WIDTH // 2, 10))
+        self.screen.blit(high_score_text, high_score_rect)
         
-        # Draw pellets remaining
+        # Draw lives (Bottom Left)
+        lives_text = self.font.render(f"Lives: {self.state_machine.lives}", True, config.WHITE)
+        self.screen.blit(lives_text, (10, config.SCREEN_HEIGHT - 40))
+        
+        # Draw level number (Bottom Right)
+        level_text = self.font.render(f"Level: {self.state_machine.level_number}", True, config.WHITE)
+        self.screen.blit(level_text, (config.SCREEN_WIDTH - 150, config.SCREEN_HEIGHT - 40))
+        
+        # Draw pellets remaining (debug-ish, kept on bottom left above lives)
         pellets_remaining = self.pellet_manager.pellets_remaining()
         pellets_text = self.font.render(f"Pellets: {pellets_remaining}", True, config.WHITE)
         self.screen.blit(pellets_text, (10, config.SCREEN_HEIGHT - 80))
-        
-        # Draw lives
-        lives_text = self.font.render(f"Lives: {self.state_machine.lives}", True, config.WHITE)
-        self.screen.blit(lives_text, (10, config.SCREEN_HEIGHT - 120))
-        
-        # Draw level number
-        level_text = self.font.render(f"Level: {self.state_machine.level_number}", True, config.WHITE)
-        self.screen.blit(level_text, (config.SCREEN_WIDTH - 150, config.SCREEN_HEIGHT - 80))
         
         # Draw state-specific messages
         current_state = self.state_machine.get_state()
