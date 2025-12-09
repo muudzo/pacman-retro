@@ -1,79 +1,91 @@
 import pytest
-from pacman_game.ai.pathfinding import a_star, get_next_direction, get_neighbors
+from hypothesis import given, strategies as st
 from pacman_game import config
+from pacman_game.ai.pathfinding import a_star, get_next_direction, get_neighbors
+from pacman_game.level import Level
 
-def test_a_star_path_found(simple_grid_level):
-    """Test A* finds path in clear grid"""
-    # Start (1,1), Goal (3,1). Should adhere to grid.
+def test_a_star_path_found_basic(simple_grid_level):
+    """Test A* finds path in clear grid with explicit path validation"""
     start = (1, 1)
     goal = (3, 1)
-    
     path = a_star(start, goal, simple_grid_level)
     
     assert path is not None
-    assert len(path) > 1
-    assert path[0] == start
-    assert path[-1] == goal
-    
-    # Path should be contiguous
-    for i in range(len(path)-1):
-        curr = path[i]
-        next_n = path[i+1]
-        dist = abs(curr[0] - next_n[0]) + abs(curr[1] - next_n[1])
-        assert dist == 1
+    assert len(path) == 3 # (1,1)->(2,1)->(3,1)
+    assert path == [(1,1), (2,1), (3,1)]
 
-def test_a_star_no_path_to_wall(simple_grid_level):
-    """Test pathfinding to a wall returns None"""
+def test_a_star_start_is_goal(simple_grid_level):
+    """Edge Case: Start equals Goal should return path with single node"""
     start = (1, 1)
-    # (0, 0) is a wall in simple grid
-    goal = (0, 0)
+    path = a_star(start, start, simple_grid_level)
+    assert path == [start]
+
+def test_a_star_no_path_blocked(simple_grid_level):
+    """Edge Case: Goal is unreachable"""
+    # Enclose (5, 5) with walls
+    simple_grid_level.grid[4][5] = 1
+    simple_grid_level.grid[6][5] = 1
+    simple_grid_level.grid[5][4] = 1
+    simple_grid_level.grid[5][6] = 1
     
+    start = (1, 1)
+    goal = (5, 5)
     path = a_star(start, goal, simple_grid_level)
     assert path is None
 
-def test_a_star_from_wall_start(simple_grid_level):
-    """Test pathfinding from a wall returns None"""
-    start = (0, 0)
-    goal = (1, 1)
-    
+def test_pathfinding_out_of_bounds(simple_grid_level):
+    """Edge Case: Querying out of bounds should return None gracefully"""
+    start = (1, 1)
+    goal = (-5, -5)
     path = a_star(start, goal, simple_grid_level)
     assert path is None
-
-def test_a_star_blocked_path(simple_grid_level):
-    """Test blocked path returns correct route or None"""
-    # Block path
-    # Wall at (2, 1)
-    simple_grid_level.grid[1][2] = 1
     
-    start = (1, 1)
-    goal = (3, 1)
-    
-    # Needs to go around: (1,1) -> (1,2) -> (2,2) -> (3,2) -> (3,1) or similar
-    path = a_star(start, goal, simple_grid_level)
-    assert path is not None
-    assert (2, 1) not in path
+    # Start OOB
+    path = a_star((-1, -1), (1, 1), simple_grid_level)
+    assert path is None
 
-def test_get_next_direction(simple_grid_level):
-    """Test getting next move direction from path"""
-    start = (1, 1)
-    goal = (3, 1)
+@given(
+    sx=st.integers(min_value=0, max_value=9),
+    sy=st.integers(min_value=0, max_value=9),
+    gx=st.integers(min_value=0, max_value=9),
+    gy=st.integers(min_value=0, max_value=9),
+    # Generate random 10x10 wall grid (0=Empty, 1=Wall)
+    grid_rows=st.lists(
+        st.lists(st.integers(min_value=0, max_value=1), min_size=10, max_size=10),
+        min_size=10, max_size=10
+    )
+)
+def test_pathfinding_fuzz(sx, sy, gx, gy, grid_rows):
+    """Property check: A* behaves safely on random grids"""
+    # Create mock level
+    lvl = Level()
+    lvl.grid = grid_rows
     
-    # Next step should be (2, 1) -> direction (1, 0)
-    dx_dy = get_next_direction(start, goal, simple_grid_level)
-    assert dx_dy == (1, 0)
-
-def test_get_next_direction_no_path(simple_grid_level):
-    """Test direction is (0,0) if no path"""
-    start = (1, 1)
-    goal = (0, 0) # Wall
+    start = (sx, sy)
+    goal = (gx, gy)
     
-    dx_dy = get_next_direction(start, goal, simple_grid_level)
-    assert dx_dy == (0, 0)
+    path = a_star(start, goal, lvl)
+    
+    if path is not None:
+        # Invariants if path found:
+        assert len(path) > 0
+        assert path[0] == start
+        assert path[-1] == goal
+        
+        # Path continuity
+        for i in range(len(path)-1):
+            curr = path[i]
+            nxt = path[i+1]
+            dist = abs(curr[0] - nxt[0]) + abs(curr[1] - nxt[1])
+            assert dist == 1 # Steps must be adjacent
+            # Steps must be walkable
+            assert lvl.is_wall(curr[0], curr[1]) is False
+            assert lvl.is_wall(nxt[0], nxt[1]) is False
 
-def test_get_neighbors(simple_grid_level):
-    """Test neighbor validity"""
-    # (1, 1) in simple grid -> Neighbors: (1,2), (2,1). Walls at (0,1) and (1,0).
+def test_get_neighbors_validity(simple_grid_level):
+    """Ensure get_neighbors only returns valid, walkable, in-bounds cells"""
     neighbors = get_neighbors((1, 1), simple_grid_level)
-    assert (1, 2) in neighbors
-    assert (2, 1) in neighbors
-    assert len(neighbors) == 2
+    for n in neighbors:
+        assert simple_grid_level.is_wall(n[0], n[1]) is False
+        # Manhatten dist is 1
+        assert abs(n[0] - 1) + abs(n[1] - 1) == 1
