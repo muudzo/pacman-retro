@@ -120,3 +120,28 @@ def test_wall_slide_alignment(mock_level, mock_input_handler):
     # 46 is at center (tolerance 2).
     # grid_x for 46 (tile 1) is 1. 1*30+15 = 45.
     assert p.x == 45 # Re-aligned logic check
+
+def test_reverse_direction_anywhere(mock_level, mock_input_handler):
+    """Verify player can reverse direction even if not at center"""
+    p = Player(30, 30)
+    p.direction = (1, 0) # Moving RIGHT
+    p.speed = 2
+    
+    # Position player NOT at center
+    # Center is 45. Let's say 50.
+    p.x = 50 
+    p.y = 45
+    assert p.is_at_tile_center() is False
+    
+    # Input: LEFT (Reverse)
+    mock_input_handler.get_buffered_direction.return_value = (-1, 0)
+    
+    # Update
+    p.update(mock_level, mock_input_handler)
+    
+    # Should have turned LEFT immediately
+    assert p.desired_direction == (-1, 0)
+    assert p.direction == (-1, 0)
+    # Should move left
+    assert p.x == 50 - 2
+
