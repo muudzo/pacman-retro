@@ -1,5 +1,6 @@
 """Input handling with buffering support"""
 import pygame
+from . import config
 
 
 class InputHandler:
@@ -11,6 +12,10 @@ class InputHandler:
         self.restart_requested = False
         self.debug_toggle_requested = False
         self.current_direction_input = (0, 0)
+        
+        # Input buffering
+        self.buffered_direction = (0, 0)
+        self.buffer_timestamp = 0
     
     def process_events(self, game_over=False):
         """
@@ -43,20 +48,47 @@ class InputHandler:
     
     def get_direction_input(self):
         """
-        Get current directional input from keyboard.
+        Get current directional input from keyboard with buffering.
         
         Returns:
             tuple: Direction as (dx, dy) or (0, 0) if no input
         """
         keys = pygame.key.get_pressed()
+        new_direction = (0, 0)
         
         if keys[pygame.K_LEFT]:
-            return (-1, 0)
+            new_direction = (-1, 0)
         elif keys[pygame.K_RIGHT]:
-            return (1, 0)
+            new_direction = (1, 0)
         elif keys[pygame.K_UP]:
-            return (0, -1)
+            new_direction = (0, -1)
         elif keys[pygame.K_DOWN]:
-            return (0, 1)
+            new_direction = (0, 1)
+        
+        # If a new direction is pressed, buffer it
+        if new_direction != (0, 0):
+            self.buffered_direction = new_direction
+            self.buffer_timestamp = pygame.time.get_ticks()
+        
+        return new_direction
+    
+    def get_buffered_direction(self):
+        """
+        Get buffered direction if still valid.
+        
+        Returns:
+            tuple: Buffered direction or (0, 0) if expired
+        """
+        current_time = pygame.time.get_ticks()
+        
+        # Check if buffer is still valid (within INPUT_BUFFER_DURATION ms)
+        if current_time - self.buffer_timestamp <= config.INPUT_BUFFER_DURATION:
+            return self.buffered_direction
         
         return (0, 0)
+    
+    def clear_buffer(self):
+        """Clear the input buffer"""
+        self.buffered_direction = (0, 0)
+        self.buffer_timestamp = 0
+

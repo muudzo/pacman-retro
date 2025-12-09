@@ -22,6 +22,7 @@ class Player(Entity):
         super().__init__(center_x, center_y, config.PLAYER_SPEED, radius, config.YELLOW)
         
         self.next_direction = (0, 0)
+        self.desired_direction = (0, 0)
     
     def set_next_direction(self, direction):
         """
@@ -30,23 +31,52 @@ class Player(Entity):
         Args:
             direction: Tuple (dx, dy) representing direction
         """
-        self.next_direction = direction
+        if direction != (0, 0):
+            self.desired_direction = direction
     
-    def update(self, level):
+    def is_at_tile_center(self):
+        """
+        Check if player is approximately at a tile center.
+        
+        Returns:
+            bool: True if at or near tile center
+        """
+        # Calculate position within tile
+        tile_x = self.x % config.TILE_SIZE
+        tile_y = self.y % config.TILE_SIZE
+        center = config.TILE_SIZE / 2
+        
+        # Check if within tolerance of center
+        x_centered = abs(tile_x - center) <= config.TILE_CENTER_TOLERANCE
+        y_centered = abs(tile_y - center) <= config.TILE_CENTER_TOLERANCE
+        
+        return x_centered and y_centered
+    
+    def update(self, level, input_handler=None):
         """
         Update player position.
         
         Args:
             level: Level instance for collision detection
+            input_handler: InputHandler instance for buffered input
         """
-        # Try to change direction if a new direction is requested
-        if self.next_direction != (0, 0):
-            # Try the new direction
-            new_x = self.x + self.next_direction[0] * self.speed
-            new_y = self.y + self.next_direction[1] * self.speed
+        # Get buffered input if available
+        if input_handler:
+            buffered = input_handler.get_buffered_direction()
+            if buffered != (0, 0):
+                self.desired_direction = buffered
+        
+        # Try to change direction if at tile center
+        if self.desired_direction != (0, 0) and self.is_at_tile_center():
+            # Try the desired direction
+            new_x = self.x + self.desired_direction[0] * self.speed
+            new_y = self.y + self.desired_direction[1] * self.speed
             
             if level.can_move_to(new_x, new_y, self.radius):
-                self.direction = self.next_direction
+                self.direction = self.desired_direction
+                # Clear buffer after successful turn
+                if input_handler:
+                    input_handler.clear_buffer()
         
         # Try to move in current direction
         new_x = self.x + self.direction[0] * self.speed
@@ -56,3 +86,10 @@ class Player(Entity):
         if level.can_move_to(new_x, new_y, self.radius):
             self.x = new_x
             self.y = new_y
+        elif config.WALL_SLIDE_ENABLED and self.is_at_tile_center():
+            # If hitting a wall at tile center, try to align perfectly
+            grid_x = int(self.x / config.TILE_SIZE)
+            grid_y = int(self.y / config.TILE_SIZE)
+            self.x = grid_x * config.TILE_SIZE + config.TILE_SIZE / 2
+            self.y = grid_y * config.TILE_SIZE + config.TILE_SIZE / 2
+

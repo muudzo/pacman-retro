@@ -82,8 +82,8 @@ class Game:
         if not self.state_machine.is_playing():
             return
         
-        # Update player
-        self.player.update(self.level)
+        # Update player with input handler for buffering
+        self.player.update(self.level, self.input_handler)
         
         # Collect pellets
         points = self.pellet_manager.collect_pellet(self.player.x, self.player.y)
