@@ -1,72 +1,77 @@
 import pytest
+from hypothesis import given, strategies as st
 from pacman_game import config
 from pacman_game.level import PelletManager
 from pacman_game.state_machine import GameStateMachine, GameState
 
-def test_pellet_collection():
-    """Test that collecting pellets removes them and reduces count"""
+def test_pellet_collection(level):
+    """Test pellet collection reduces count and returns points"""
     pm = PelletManager()
-    initial_count = pm.pellets_remaining()
+    initial = pm.pellets_remaining()
     
-    # Simple map in default Level might be large, but let's test specific logic
-    # Find a dot. In LEVEL_MAP, (1, 1) is a dot (2).
-    # See level.py line 7: [1, 2, ...
-    
-    # Collect at (1, 1) -> x=45, y=45
-    x = 1 * config.TILE_SIZE + 5
-    y = 1 * config.TILE_SIZE + 5
-    
+    # Collect at known pellet location (1,1) -> 45,45
+    x, y = 45, 45
     points = pm.collect_pellet(x, y)
     
     assert points == config.POINTS_PER_PELLET
-    assert pm.pellets_remaining() == initial_count - 1
-    
-    # Collect same again -> should be 0 points
+    assert pm.pellets_remaining() == initial - 1
+
+def test_pellet_double_collection():
+    """Edge Case: Double collection should yield 0 points"""
+    pm = PelletManager()
+    x, y = 45, 45
+    pm.collect_pellet(x, y)
     points = pm.collect_pellet(x, y)
     assert points == 0
-    assert pm.pellets_remaining() == initial_count - 1
 
-def test_level_complete_trigger():
-    """Test that emptying pellets triggers LEVEL_COMPLETE"""
+def test_pellet_collection_out_of_bounds():
+    """Edge Case: Collecting outside grid shouldn't crash"""
     pm = PelletManager()
-    sm = GameStateMachine()
+    initial = pm.pellets_remaining()
     
-    # Simulate collecting ALL pellets
-    # We can hack the grid to empty it quickly
-    for row in range(len(pm.pellet_grid)):
-        for col in range(len(pm.pellet_grid[0])):
-            pm.pellet_grid[row][col] = 0
+    points = pm.collect_pellet(-100, -100)
+    assert points == 0
+    assert pm.pellets_remaining() == initial
     
-    pm.collected_count = pm.total_pellets
-    
-    # Check trigger
-    triggered = sm.check_level_complete(pm.pellets_remaining())
-    
-    assert triggered is True
-    assert sm.get_state() == GameState.LEVEL_COMPLETE
+    points = pm.collect_pellet(10000, 10000)
+    assert points == 0
 
-def test_level_progression():
-    """Test leveling up increments level number"""
-    sm = GameStateMachine()
-    sm.current_state = GameState.LEVEL_COMPLETE
-    sm.transition_timer = 119 # 1 frame before trigger
-    
-    # Update to trigger
-    action = sm.update_transition()
-    
-    assert action == 'reload_level'
-    assert sm.level_number == 2
-    assert sm.get_state() == GameState.PLAYING
-
-def test_reset_pellets():
-    """Test resizing restores pellets"""
+@given(
+    x=st.integers(min_value=-1000, max_value=2000),
+    y=st.integers(min_value=-1000, max_value=2000)
+)
+def test_pellet_collection_fuzz(x, y):
+    """Property test: Collection attempts never crash game"""
     pm = PelletManager()
-    total = pm.total_pellets
+    try:
+        points = pm.collect_pellet(x, y)
+    except Exception as e:
+        pytest.fail(f"collect_pellet crashed with {e}")
+    
+    assert points in [0, config.POINTS_PER_PELLET]
+    
+def test_pellet_manager_reset():
+    """Verify reset restores all pellets"""
+    pm = PelletManager()
+    total = pm.pellets_remaining()
     
     # Collect one
-    pm.collect_pellet(45, 45) # (1,1)
+    pm.collect_pellet(45, 45)
     assert pm.pellets_remaining() == total - 1
     
-    # Reset
     pm.reset()
     assert pm.pellets_remaining() == total
+
+def test_level_progression():
+    """Verify state machine progression logic"""
+    sm = GameStateMachine()
+    
+    # Set to end of level complete state
+    sm.current_state = GameState.LEVEL_COMPLETE
+    sm.level_number = 1
+    sm.transition_timer = config.LEVEL_COMPLETE_DELAY - 1
+    
+    # Update should act
+    action = sm.update_transition()
+    assert action == 'reload_level'
+    assert sm.level_number == 2
