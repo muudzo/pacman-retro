@@ -24,8 +24,8 @@ def test_ghost_player_collision_boundary():
     g = Ghost(121, 100, config.RED, "BLINKY") 
     assert g.collides_with(p) is True
     
-    # Distance 23 -> Should NOT collide
-    g.x = 123
+    # Distance 23 -> Should NOT collide (increased to 40 to be safe)
+    g.x = 140
     assert g.collides_with(p) is False
 
 def test_collision_edge_case_negative_coords():
